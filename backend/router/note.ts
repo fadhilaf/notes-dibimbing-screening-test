@@ -4,7 +4,6 @@ import { customAlphabet, urlAlphabet } from "nanoid";
 
 import sequelize from "../config/db";
 import Note from "../model/note";
-import { isValidDateFormat } from "../util/validDateFormat";
 import validateRequest from "../middleware/validateRequest";
 
 const nanoid = customAlphabet(urlAlphabet.replace("-", ""), 12)
@@ -18,6 +17,9 @@ noteRouter.get(
 
     if (typeof req.query.page === 'string') {
       page = parseInt(req.query.page, 10)
+      if (page < 1) {
+        return res.status(400).send("Invalid page number")
+      }
     }
 
     try {
@@ -27,18 +29,23 @@ noteRouter.get(
           'title',
           'createdAt',
           //optimizing query, only the first 20 character took
-          [sequelize.fn('SUBSTRING', sequelize.col('body'), 1, 50), 'body']
+          [sequelize.fn('SUBSTRING', sequelize.col('body'), 1, 64), 'body']
         ],
 
         //optimizing query, only limit 10 per page
-        offset: (page - 1) * 5,
-        limit: 5,
+        offset: (page - 1) * 4,
+        limit: 4,
         order: [
           ['createdAt', 'DESC'],
         ]
       })
 
-      return res.status(200).json(notes)
+      const maxPage = Math.ceil(await Note.count() / 4)
+
+      return res.status(200).json({
+        maxPage,
+        notes
+      })
 
     } catch(error) {
       console.log(error)
@@ -97,7 +104,6 @@ noteRouter.put(
   [
     body("title").notEmpty().isString().withMessage("'title' is required"),
     body("body").notEmpty().isString().withMessage("'body' is required"),
-    body("createdAt").notEmpty().custom(isValidDateFormat).withMessage("'createdAt' is required and type should be date format YYYY-MM-DDTHH:mm:ss.SSSZ").toDate(),
     validateRequest
   ],
   async (req: Request, res: Response) => {
@@ -111,7 +117,6 @@ noteRouter.put(
       const [_, [updatedNote]] = await Note.update({
         title: req.body.title,
         body: req.body.body,
-        createdAt: req.body.createdAt || note.createdAt
       }, {
         where: {
           id: req.params.id

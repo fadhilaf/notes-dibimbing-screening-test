@@ -1,7 +1,11 @@
-import express, { Express, Request, Response , Application } from 'express';
+import express, { Application } from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 
-import sequelize, { dbConnect } from './config/db';
+import { createHandler } from 'graphql-http/lib/use/express';
+import { RootQuerySchema } from './graphql/schema';
+
+import { dbConnect } from './config/db';
 
 import noteRouter from './router/note';
 import errorHandler from './middleware/errorHandler';
@@ -9,6 +13,9 @@ import errorHandler from './middleware/errorHandler';
 dotenv.config();
 
 const app: Application = express();
+app.use(cors());
+
+app.all('/graphql', createHandler({ schema: RootQuerySchema }));
 
 app.use(express.json());
 
