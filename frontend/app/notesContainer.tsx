@@ -33,6 +33,7 @@ export default function NotesContainer({ notes, maxPage }: {notes: Note[], maxPa
 
   return (
     <Container maxW='6xl' padding='4'>
+      <Button>Delete All</Button>
       <Wrap>
         {notes.length != 0 ? (notes.map((note, index) => (
           <WrapItem key={index}>
